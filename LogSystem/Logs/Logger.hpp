@@ -17,10 +17,13 @@
 #include "level.hpp"
 #include "format.hpp"
 #include "sink.hpp"
+#include "looper.hpp"
 #include <atomic>
 #include <thread>
 #include <mutex>
 #include <cstdarg>
+#include <memory>
+#include <unordered_map>
 
 namespace ns_log
 {
@@ -38,6 +41,7 @@ namespace ns_log
             // 5.
             Log(ss.str().c_str(), ss.str().size());
         }
+
         // 抽象接口完成实际的落地输出,不同日志器对应不同的落地方式
         virtual void Log(const char *data, size_t len) = 0;
 
@@ -47,6 +51,10 @@ namespace ns_log
         {
         }
         using ptr = std::shared_ptr<Logger>;
+        const std::string &Name()
+        {
+            return _logger_name;
+        }
         // 完成日志消息对象的构造,并进行格式化,得到格式后的日志消息字符串
         void Debug(const std::string &filename, size_t line, const std::string &fmt, ...)
         {
@@ -101,7 +109,7 @@ namespace ns_log
             Serialize(LogLevel::Value::INFO, filename, line, res);
             free(res);
         }
-        void Waring(const std::string &filename, size_t line, const std::string &fmt, ...)
+        void Warning(const std::string &filename, size_t line, const std::string &fmt, ...)
         {
             // 1.
             if (LogLevel::Value::WARN < _limit_level)
@@ -204,6 +212,35 @@ namespace ns_log
         }
     };
 
+    // 异步日志器
+    class AsyncLogger : public Logger
+    {
+    public:
+        AsyncLogger(const std::string &logger_name, LogLevel::Value level, Formatter::ptr &formatter, std::vector<LogSink::ptr> &sinks, AsyncType loop_type)
+            : Logger(logger_name, level, formatter, sinks), _looper(std::make_shared<AsyncLooper>(std::bind(&AsyncLogger::RealLog, this, std::placeholders::_1), loop_type))
+        {
+        }
+        void Log(const char *data, size_t len) override // 将数据写入缓冲区
+        {
+            _looper->Push(data, len);
+        }
+        // 将缓冲区中的数据落地
+        void RealLog(Buffer &buffer)
+        {
+            if (_sinks.empty())
+            {
+                return;
+            }
+            for (auto &sink : _sinks)
+            {
+                sink->Log(buffer.Begin(), buffer.ReadAbleSize());
+            }
+        }
+
+    private:
+        AsyncLooper::ptr _looper;
+    };
+
     // 建造者模式 构造 日志器, 简化用户使用的复杂度
     // 1.抽象日志器建造者类
     // 设置日志器类型, 将不同类型日志器放到同一个日志器建造者类中完成
@@ -217,19 +254,21 @@ namespace ns_log
     class LoggerBuilder
     {
     public:
-        LoggerBuilder() : _logger_type(LoggerType::LOGGER_SYNC), _limit_level(LogLevel::Value::DEBUG)
+        LoggerBuilder() : _logger_type(LoggerType::LOGGER_SYNC), _limit_level(LogLevel::Value::DEBUG), _looper_type(AsyncType::ASYNC_SAFE)
         {
         }
         void BuildLoggerType(LoggerType type)
         {
             _logger_type = type;
         }
-
         void BuildLoggerName(const std::string &name)
         {
             _logger_name = name;
         }
-
+        void BuildEnableUnsafeAsync()
+        {
+            _looper_type = AsyncType::ASYNC_UNSAFE;
+        }
         void BuildLoggerLevel(LogLevel::Value level)
         {
             _limit_level = level;
@@ -248,6 +287,7 @@ namespace ns_log
         virtual Logger::ptr Build() = 0;
 
     protected:
+        AsyncType _looper_type;
         LoggerType _logger_type;
         std::string _logger_name;
         LogLevel::Value _limit_level;
@@ -274,10 +314,93 @@ namespace ns_log
             }
             if (_logger_type == LoggerType::LOGGER_ASYNC)
             {
-
+                return std::make_shared<AsyncLogger>(_logger_name, _limit_level, _formatter, _sinks, _looper_type);
             }
             // 同步日志器
-            return std::make_shared<SyncLogger>(_logger_name, _limit_level, _formatter, _sinks); 
+            return std::make_shared<SyncLogger>(_logger_name, _limit_level, _formatter, _sinks);
+        }
+    };
+
+    class LoggerManager
+    {
+    private:
+        LoggerManager() 
+        {
+            std::unique_ptr<ns_log::LoggerBuilder> builder(new ns_log::LocalLoggerBuilder());
+            builder->BuildLoggerName("root");
+            _root_logger = builder->Build();
+            _loggers.insert(std::make_pair("root", _root_logger));
+        }
+
+    public:
+        static LoggerManager &getInstanence()
+        {
+            static LoggerManager eton;
+            return eton;
+        }
+        void AddLogger(Logger::ptr &logger)
+        {
+            if (HasLogger(logger->Name()))
+                return;
+            std::unique_lock<std::mutex> lock(_mutex);
+            _loggers.insert(std::make_pair(logger->Name(), logger));
+        }
+        bool HasLogger(const std::string &name)
+        {
+            std::unique_lock<std::mutex> lock(_mutex);
+            auto it = _loggers.find(name);
+            if (it == _loggers.end())
+                return false;
+            return true;
+        }
+        Logger::ptr GetLogger(const std::string &name)
+        {
+            std::unique_lock<std::mutex> lock(_mutex);
+            auto it = _loggers.find(name);
+            if (it == _loggers.end())
+                return Logger::ptr();
+            return it->second;
+        }
+        Logger::ptr RootLogger()
+        {
+            return _root_logger;
+        }
+
+    private:
+        std::mutex _mutex;
+        Logger::ptr _root_logger;                              // 默认日志器
+        std::unordered_map<std::string, Logger::ptr> _loggers; // 管理日志器的数组
+    };
+
+    // 设置全局日志器
+    class GlobalLoggerBuilder : public LoggerBuilder
+    {
+    public:
+        Logger::ptr Build() override
+        {
+            assert(_logger_name.empty() == false); // 必须要有日志器名称
+            if (_formatter.get() == nullptr)
+            {
+                // 没有日志器
+                _formatter = std::make_shared<Formatter>();
+            }
+            if (_sinks.empty())
+            {
+                // 默认添加标准输出的落地器
+                BuildSink<StdoutSink>();
+            }
+            Logger::ptr logger;
+            if (_logger_type == LoggerType::LOGGER_ASYNC)
+            {
+                logger = std::make_shared<AsyncLogger>(_logger_name, _limit_level, _formatter, _sinks, _looper_type);
+            }
+            else
+            {
+                // 同步日志器
+                logger =  std::make_shared<SyncLogger>(_logger_name, _limit_level, _formatter, _sinks);
+            }
+            LoggerManager::getInstanence().AddLogger(logger);
+            return logger;
         }
     };
 }

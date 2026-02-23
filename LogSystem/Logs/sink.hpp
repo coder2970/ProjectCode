@@ -33,6 +33,7 @@ namespace ns_log
         void Log(const char *data, size_t len) override
         {
             std::cout.write(data, len); // 从data中写入len长度的数据
+            // std::cout.flush();
         }
     };
     // 指定文件
@@ -53,6 +54,7 @@ namespace ns_log
         void Log(const char *data, size_t len) override
         {
             _ofs.write(data, len);
+            // _ofs.flush();
             assert(_ofs.good());
         }
 
@@ -108,6 +110,7 @@ namespace ns_log
                 _cur_filesize = 0;
             }
             _ofs.write(data, len);
+            // _ofs.flush();
             assert(_ofs.good());
             _cur_filesize += len;
         }
