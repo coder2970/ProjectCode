@@ -6,12 +6,14 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include "../Common/util.hpp"
+#include "../Common/log.hpp"
 // 只负责提供代码编译功能
 
 namespace ns_compiler
 {
     // 引入路劲拼接功能
     using namespace ns_util;
+    using namespace ns_log;
 
     class Compiler
     {
@@ -32,16 +34,19 @@ namespace ns_compiler
         static bool Compile(const std::string &file_name)
         {
             pid_t pid = fork();
-            if (pid < 0)
+            if (pid < 0) 
             {
                 /* 创建失败 */
+                LOG(ERROR) << "内部错误,创建子进程失败\n";
                 return false;
             }
             else if (pid == 0)
             {
+                umask(0);
                 int _stderr = open(PathUtil::Stderr(file_name).c_str(), O_CREAT | O_WRONLY, 0644);
                 if(_stderr < 0)
                 {
+                    LOG(WARING) << "stderr文件创建失败\n";
                     exit(1);
                 }
                 // 重定向标准错误到stderr文件中
@@ -49,8 +54,8 @@ namespace ns_compiler
                 
                 /* 子进程 */
                 /* 调用编译器完成对代码的编译工作 */
-                execlp("g++", "-o", PathUtil::Exe(file_name).c_str(), PathUtil::Src(file_name).c_str(), "-std=c++11", nullptr);
-
+                execlp("g++", "g++", "-o", PathUtil::Exe(file_name).c_str(), PathUtil::Src(file_name).c_str(), "-std=c++11", nullptr);
+                LOG(ERROR) << "调用g++编译器失败\n";
                 exit(2);
             }
             else
@@ -60,9 +65,11 @@ namespace ns_compiler
                 // 编译是否成功:只关心有没有形成对应的可执行程序
                 if (FileUtil::IsFileExist(PathUtil::Exe(file_name)))
                 {
+                    LOG(INFO) << PathUtil::Src(file_name) << "编译成功\n";
                     return true;
                 }
             }
+            LOG(ERROR) << "可执行程序创建失败\n";
             return false;
         }
 
