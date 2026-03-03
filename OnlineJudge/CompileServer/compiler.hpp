@@ -30,7 +30,7 @@ namespace ns_compiler
         // 参数: 编译文件的文件名test
         // test -> temp/test.cpp 源文件
         // test -> temp/test.exe 成功可执行文件
-        // test -> temp/test.error 执行出错文件
+        // test -> temp/test.compile_error 执行出错文件
         static bool Compile(const std::string &file_name)
         {
             pid_t pid = fork();
@@ -43,7 +43,7 @@ namespace ns_compiler
             else if (pid == 0)
             {
                 umask(0);
-                int _stderr = open(PathUtil::Stderr(file_name).c_str(), O_CREAT | O_WRONLY, 0644);
+                int _stderr = open(PathUtil::CompileError(file_name).c_str(), O_CREAT | O_WRONLY, 0644);
                 if(_stderr < 0)
                 {
                     LOG(WARING) << "stderr文件创建失败\n";
@@ -72,7 +72,5 @@ namespace ns_compiler
             LOG(ERROR) << "可执行程序创建失败\n";
             return false;
         }
-
-    private:
     };
 }
