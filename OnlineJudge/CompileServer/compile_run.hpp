@@ -3,6 +3,7 @@
 #include "../Common/util.hpp"
 #include "compiler.hpp"
 #include "runner.hpp"
+#include <signal.h>
 #include <jsoncpp/json/json.h>
 // 整合功能,对外提供接口
 // 适配用户请求, 定制通信协议
@@ -26,8 +27,40 @@ namespace ns_compile_and_run
         {
         }
         // 将信号报错转化为相应的原因
-        static std::string CodeToDesc(int code)
+        // < 0 : 非运行报错
+        // > 0 : 运行时错误
+        // = 0 : 程序运行完
+        static std::string CodeToDesc(int code, const std::string &file_name)
         {
+            std::string desc;
+            switch (code)
+            {
+            case 0:
+                desc = "编译运行成功";
+                break;
+            case 1:
+                desc = "用户提交代码为空";
+                break;
+            case -2:
+                desc = "未知错误";
+                break;
+            case -3:
+                // desc = "代码编译错误";
+                FileUtil::ReadFile(PathUtil::CompileError(file_name), &desc, true);
+                break;
+            case SIGABRT:
+                desc = "内存超过限制";
+                break;
+            case SIGXCPU:
+                desc = "CPU使用超时";
+                break;
+            case SIGFPE:
+                desc = "除零错误";
+            default:
+                desc = "debug code: " + std::to_string(code);
+                break;
+            }
+            return desc;
         }
         // 输入:1. code: 用户提交的代码 2. input: 用户代码中的输入(cin内容)(暂时不做处理) 3. cpu_limit: cpu运行时间要求 4. mem_limit: 内存运行要求
         // 输出:1. status: 状态码(0为成功, 非0失败) 2. reason: 请求结果 3. stdout: 程序运行结果(选填) 4.stderr: 程序运行完的错误结果(选填)
@@ -100,12 +133,17 @@ namespace ns_compile_and_run
         END:
             // 根据status_code填充reason
             out_value["status"] = status_code;
-            out_value["reason"] = CodeToDesc(status_code);
+            out_value["reason"] = CodeToDesc(status_code, file_name);
             if (status_code == 0)
             {
                 // 整个过程全部成功,读取运行结果至stdout或stderr(程序运行成功,运行结果可能和预期不对)
-                out_value["stdout"] = FileUtil::ReadFile(PathUtil::Stdout(file_name));
-                out_value["stderr"] = FileUtil::ReadFile(PathUtil::Stderr(file_name));
+                std::string _stdout;
+                FileUtil::ReadFile(PathUtil::Stdout(file_name), &_stdout, true);
+                out_value["stdout"] = _stdout;
+                
+                std::string _stderr;
+                FileUtil::ReadFile(PathUtil::Stderr(file_name), &_stderr, true);
+                out_value["stderr"] = _stderr;
             }
 
             // 序列化返回
