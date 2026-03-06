@@ -4,6 +4,7 @@
 #include "compiler.hpp"
 #include "runner.hpp"
 #include <signal.h>
+#include <unistd.h>
 #include <jsoncpp/json/json.h>
 // 整合功能,对外提供接口
 // 适配用户请求, 定制通信协议
@@ -61,6 +62,41 @@ namespace ns_compile_and_run
                 break;
             }
             return desc;
+        }
+
+        static void RemoveTempFile(const std::string& file_name)
+        {
+            // 清理文件的数目是不确定的
+            std::string _src = PathUtil::Src(file_name);
+            if(FileUtil::IsFileExist(_src))
+            {
+                unlink(_src.c_str());
+            }
+            std::string _compile_error = PathUtil::CompileError(file_name);
+            if(FileUtil::IsFileExist(_compile_error))
+            {
+                unlink(_compile_error.c_str());
+            }
+            std::string _exectue = PathUtil::Exe(file_name);
+            if(FileUtil::IsFileExist(_exectue))
+            {
+                unlink(_exectue.c_str());
+            }
+            std::string _stdin = PathUtil::Stdin(file_name);
+            if(FileUtil::IsFileExist(_stdin))
+            {
+                unlink(_stdin.c_str());
+            }
+            std::string _stdout = PathUtil::Stdout(file_name);
+            if(FileUtil::IsFileExist(_stdout))
+            {
+                unlink(_stdout.c_str());
+            }
+            std::string _stderr = PathUtil::Stderr(file_name);
+            if(FileUtil::IsFileExist(_stderr))
+            {
+                unlink(_stderr.c_str());
+            }
         }
         // 输入:1. code: 用户提交的代码 2. input: 用户代码中的输入(cin内容)(暂时不做处理) 3. cpu_limit: cpu运行时间要求 4. mem_limit: 内存运行要求
         // 输出:1. status: 状态码(0为成功, 非0失败) 2. reason: 请求结果 3. stdout: 程序运行结果(选填) 4.stderr: 程序运行完的错误结果(选填)
@@ -149,6 +185,9 @@ namespace ns_compile_and_run
             // 序列化返回
             Json::StyledWriter writer;
             *out_json = writer.write(out_value);
+
+            // 清理临时文件
+            RemoveTempFile(file_name);
         }
 
     private:
