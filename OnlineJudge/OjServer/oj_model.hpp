@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <fstream>
+
 // 根据list文件, 加载所有的题目到内存中
 // model: 主要来和数据交互,对外提供访问数据的接口
 
@@ -77,6 +78,8 @@ namespace ns_model
             }
             LOG(INFO) << "加载题库成功" << "\n";
             in.close();
+
+            return true;
         }
 
         // 获取全部题目

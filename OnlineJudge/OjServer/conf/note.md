@@ -1,0 +1,1 @@
+conf目录: 可以提供服务的主机列表, 记录compile_server在哪些机器上部署了服务, 方便oj_server进行请求
