@@ -27,9 +27,13 @@ int main()
                 resp.set_content(html, "text/html; charset=utf-8"); });
 
     // 3.用户提交代码, 使用判题功能(每道题的测试用例, compile_and_run)
-    svr.Get(R"(/judge/(\d+))", [](const Request &req, Response &resp)
-            { std::string num = req.matches[1]; 
-                resp.set_content("指定题目的判题" + num, "text/plain; charset=utf-8"); });
+    svr.Post(R"(/judge/(\d+))", [&ctrl](const Request &req, Response &resp){ 
+        std::string num = req.matches[1];
+        std::string result_json;
+        ctrl.Judge(num, req.body, &result_json);
+        resp.set_content(result_json, "application/json;charset=utf-8");
+        // resp.set_content("指定题目的判题" + num, "text/plain; charset=utf-8"); 
+    });
     svr.set_base_dir("./wwwroot");
     svr.listen("0.0.0.0", 8080);
     return 0;

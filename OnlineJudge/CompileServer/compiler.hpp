@@ -54,7 +54,7 @@ namespace ns_compiler
                 
                 /* 子进程 */
                 /* 调用编译器完成对代码的编译工作 */
-                execlp("g++", "g++", "-o", PathUtil::Exe(file_name).c_str(), PathUtil::Src(file_name).c_str(), "-std=c++11", nullptr);
+                execlp("g++", "g++", "-o", PathUtil::Exe(file_name).c_str(), PathUtil::Src(file_name).c_str(), "-D", "COMPILER_ONLINE","-std=c++11", nullptr);
                 LOG(ERROR) << "调用g++编译器失败\n";
                 exit(2);
             }
