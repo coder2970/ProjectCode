@@ -4,15 +4,28 @@
 
 using namespace httplib;
 using namespace ns_control;
+
+static Control *ctrl_p = nullptr;
+void Recovery(int signo)
+{
+    ctrl_p->RecoveryMachine();
+}
 int main()
 {
+    // signal(SIGINT, Recovery);
     // 用户请求的服务路由功能 - 根据用户不同需求, 为 用户提供不同的内容
-    Server svr;
     Control ctrl;
+    ctrl_p = &ctrl;
+    Server svr;
+    auto log_client = [](const Request &req)
+    {
+        std::cout << "client: " << req.remote_addr << ":" << req.remote_port << std::endl;
+    };
     // 1.获取所有题目列表
     // 返回一张有所有题目列表的网页
     svr.Get("/all_questions", [&ctrl](const Request &req, Response &resp)
             {
+                
                 std::string html;
                 ctrl.AllQuestions(&html);
                 resp.set_content(html, "text/html; charset=utf-8"); });
@@ -21,6 +34,7 @@ int main()
     // 正则表达式
     svr.Get(R"(/question/(\d+))", [&ctrl](const Request &req, Response &resp)
             { 
+                
                 std::string number = req.matches[1];
                 std::string html;
                 ctrl.OneQuestion(number, &html);
@@ -28,6 +42,7 @@ int main()
 
     // 3.用户提交代码, 使用判题功能(每道题的测试用例, compile_and_run)
     svr.Post(R"(/judge/(\d+))", [&ctrl](const Request &req, Response &resp){ 
+        
         std::string num = req.matches[1];
         std::string result_json;
         ctrl.Judge(num, req.body, &result_json);

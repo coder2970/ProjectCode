@@ -5,6 +5,7 @@
 #include <mutex>
 #include <fstream>
 #include <cassert>
+#include <algorithm>
 #include <jsoncpp/json/json.h>
 #include "oj_model.hpp"
 #include "oj_view.hpp"
@@ -33,7 +34,18 @@ namespace ns_control
         ~Machine()
         {
         }
-
+        void ResetLoad()
+        {
+            if (_mtx)
+            {
+                _mtx->lock();
+            }
+            _load = 0;
+            if (_mtx)
+            {
+                _mtx->unlock();
+            } 
+        }
         // 对负载进行递增
         void IncLoad()
         {
@@ -163,6 +175,7 @@ namespace ns_control
             {
                 if(*iter == which)
                 {
+                    _machines[which].ResetLoad();
                     _online.erase(iter);
                     _offline.push_back(which);
                     break;
@@ -174,7 +187,12 @@ namespace ns_control
         // 上线
         void OnlineMachine()
         {
-            // 统一上线
+            // 统一上线 offline -> online;
+            _mtx.lock();
+            _online.insert(_online.end(), _offline.begin(), _offline.end());
+            _offline.erase(_offline.begin(), _offline.end());
+            _mtx.unlock();
+            LOG(INFO) << "所有主机均已上线" << "\n";
         }
         // for test
         void ShowMechines()
@@ -207,6 +225,11 @@ namespace ns_control
     public:
         Control() {}
         ~Control() {}
+        // 恢复主机
+        void RecoveryMachine()
+        {
+            _load_balance.OnlineMachine();
+        }
         // 根据题目数据构建网页
         bool AllQuestions(std::string *html)
         {
@@ -214,6 +237,8 @@ namespace ns_control
             std::vector<Question> all;
             if (_model.GetAllQuestions(&all))
             {
+                std::sort(all.begin(), all.end(), [](const Question &q1, const Question &q2)
+                          { return std::atoi(q1.number.c_str()) < std::atoi(q2.number.c_str()); });
                 // 获取题目信息成功, 将题目数据构建成网页
                 _view.AllExpandHtml(all, html);
             }
@@ -255,7 +280,7 @@ namespace ns_control
             Json::Value compile_value;
             compile_value["input"] = in_value["input"].asString();
             std::string code = in_value["code"].asString();
-            compile_value["code"] = code + q.tail;
+            compile_value["code"] = code +"\n"+ q.tail;
             compile_value["cpu_limit"] = q.cpu_limit;
             compile_value["mem_limit"] = q.mem_limit;
             Json::FastWriter writer;
@@ -269,11 +294,11 @@ namespace ns_control
                 {
                     break;
                 }
-                LOG(INFO) << "选择主机成功, id: " << id << " 详情: " << m->_ip << ":" << m->_port << "\n";
 
                 // 4.发起http请求, 得到结果
                 Client cli(m->_ip, m->_port);
                 m->IncLoad();
+                LOG(INFO) << "选择主机成功, id: " << id << " 详情: " << m->_ip << ":" << m->_port << " 负载: " << m->Load() << "\n";
                 if (auto res = cli.Post("/compile_and_run", compile_string, "application/json;charset=utf-8"))
                 {
                     // 5.将结果赋值给out_json
