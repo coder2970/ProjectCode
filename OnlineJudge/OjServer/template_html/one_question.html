@@ -10,9 +10,7 @@
     <!-- 官⽹链接：https://ace.c9.io/ -->
     <!-- CDN链接：https://cdnjs.com/libraries/ace -->
     <!-- 使⽤介绍：https://www.iteye.com/blog/ybc77107-2296261 -->
-    <!-- https://justcode.ikeepstudying.com/2016/05/ace-editor-
-%E5%9C%A8%E7%BA%BF%E4%BB%A3%E7%A0%81%E7%BC%96%E8%BE%91%E6%9E%81%E5%85%B6%E9%AB%
-98%E4%BA%AE/ -->
+    <!-- https://justcode.ikeepstudying.com/2016/05/ace-editor-%E5%9C%A8%E7%BA%BF%E4%BB%A3%E7%A0%81%E7%BC%96%E8%BE%91%E6%9E%81%E5%85%B6%E9%AB%98%E4%BA%AE/ -->
     <!-- 引⼊ACE CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/ace.js" type="text/javascript"
         charset="utf-8"></script>
@@ -227,9 +225,8 @@
                     text: _reason
                 });
                 reason_lable.appendTo(result_div);
-                if (status == 0) {
-                    // 请求是成功的，编译运⾏过程没出问题，但是结果是否通过看测试⽤例的
-                    结果
+                if (_status == 0) {
+                    // 请求是成功的，编译运⾏过程没出问题，但是结果是否通过看测试⽤例的结果
                     var _stdout = data.stdout;
                     var _stderr = data.stderr;
                     var stdout_lable = $("<pre>", {

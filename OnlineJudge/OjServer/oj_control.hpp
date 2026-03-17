@@ -7,7 +7,7 @@
 #include <cassert>
 #include <algorithm>
 #include <jsoncpp/json/json.h>
-#include "oj_model.hpp"
+#include "oj_model2.hpp"
 #include "oj_view.hpp"
 #include "../Common/util.hpp"
 #include "../Common/log.hpp"
@@ -106,7 +106,9 @@ namespace ns_control
             assert(LoadConf(service_machine));
             LOG(INFO) << "加载配置文件" << service_machine << "成功" << "\n";
         }
-        ~LoadBalance() {}
+        ~LoadBalance() 
+        {
+        }
         // 加载配置文件
         bool LoadConf(const std::string &machine_conf)
         {
@@ -140,7 +142,7 @@ namespace ns_control
         // id 和 m均为输出型参数, id表示主机id, m为该主机的更详细信息
         bool SmartChoice(int *id, Machine **m)
         {
-            // 1. 使用选择好的主(更新该主机的负载)
+            // 1. 使用选择好的主机(更新该主机的负载)
             // 2. 后续可能离线该主机
             _mtx.lock();
             // 均衡算法: 轮询 + hash

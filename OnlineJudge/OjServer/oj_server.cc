@@ -47,7 +47,6 @@ int main()
         std::string result_json;
         ctrl.Judge(num, req.body, &result_json);
         resp.set_content(result_json, "application/json;charset=utf-8");
-        // resp.set_content("指定题目的判题" + num, "text/plain; charset=utf-8"); 
     });
     svr.set_base_dir("./wwwroot");
     svr.listen("0.0.0.0", 8080);

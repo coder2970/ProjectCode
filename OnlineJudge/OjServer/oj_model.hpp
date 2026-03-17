@@ -20,7 +20,7 @@ namespace ns_model
     {
         std::string number; // 题目编号
         std::string title;  // 题目标题
-        std::string star;   // 难度 : 简单中等困难
+        std::string star;   // 难度: 简单中等困难
         int cpu_limit;      // 时间要求
         int mem_limit;      // 空间要求 kb
         std::string desc;   // 题目描述
@@ -32,8 +32,13 @@ namespace ns_model
     class Model
     {
     public:
-        Model() { assert(LoadQuestionList(question_list)); }
-        ~Model() {}
+        Model() 
+        { 
+            assert(LoadQuestionList(question_list)); 
+        }
+        ~Model() 
+        {
+        }
         // 加载题目的配置文件 questions/question.list
         bool LoadQuestionList(const std::string &question_list)
         {

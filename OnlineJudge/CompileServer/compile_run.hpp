@@ -105,7 +105,7 @@ namespace ns_compile_and_run
             // 反序列化
             Json::Value in_value;
             Json::Reader reader;
-            reader.parse(in_json, in_value); // todo出错
+            reader.parse(in_json, in_value); 
 
             // 创建原文件,并将代码写入
             std::string code = in_value["code"].asString();
@@ -121,8 +121,6 @@ namespace ns_compile_and_run
             if (code.size() == 0)
             {
                 // 代码为空
-                // out_value["status"] = -1; // 代码为空
-                // out_value["reason"] = "用户提交代码为空";
                 status_code = -1;
                 goto END;
             }
@@ -130,8 +128,6 @@ namespace ns_compile_and_run
             file_name = FileUtil::UniqueFileName();
             if (!FileUtil::WriteFile(PathUtil::Src(file_name), code)) // 把代码写入文件, 即形成临时src原文件, 如test.cpp
             {
-                // out_value["status"] = -2; // 未知错误
-                // out_value["reason"] = "提交代码发生未知错误";
                 status_code = -2;
                 goto END;
             }
@@ -139,10 +135,6 @@ namespace ns_compile_and_run
             // 编译 & 运行
             if (!Compiler::Compile(file_name))
             {
-                // 编译失败
-                // out_value["status"] = -3;
-                // // 编译失败的原因写入了compile_error文件,将其内容写入reason中
-                // out_value["reason"] = FileUtil::ReadFile(PathUtil::CompileError(file_name));
                 status_code = -3;
                 goto END;
             }
@@ -150,15 +142,10 @@ namespace ns_compile_and_run
             run_result = Runner::Run(file_name, cpu_limit, mem_limit);
             if (run_result < 0)
             {
-                // 内部错误
-                // out_value["status"] = -2; // 未知错误
-                // out_value["reason"] = "提交代码发生未知错误";
                 status_code = -2;
             }
             else if (run_result > 0)
             {
-                // out_value["status"] = run_result;               // 运行时报错
-                // out_value["reason"] = SignalToDesc(run_result); // 信号->报错原因
                 status_code = run_result;
             }
             else
@@ -189,7 +176,5 @@ namespace ns_compile_and_run
             // 清理临时文件
             RemoveTempFile(file_name);
         }
-
-    private:
     };
 }
