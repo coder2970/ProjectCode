@@ -1,8 +1,6 @@
 #pragma once
 #include "Logger.hpp"
-// 1.提供获取指定日志器的全局接口
-// 2.使用宏函数对日志器的接口进行代理
-// 3. 提供宏函数,直接通过默认日志器进行日志的标准输出打印
+
 namespace ns_log
 {
     Logger::ptr GetLogger(const std::string &name)

@@ -1,6 +1,5 @@
-// 实现异步工作器
 #pragma once
-
+// 实现异步工作器
 #include <atomic>
 #include <condition_variable>
 #include <functional>
@@ -27,7 +26,6 @@ namespace ns_log
         {
             while (true)
             {
-                // 为互斥锁设置生命周期, 数据的处理过程不需要加锁
                 {
                     // 1.判断生产缓冲区有无数据, 有则交换,无则阻塞
                     std::unique_lock<std::mutex> lock(_mutex);
@@ -36,7 +34,7 @@ namespace ns_log
                     _cond_consume.wait(lock,
                                        [&]()
                                        { return _stop || !_product_buffer.Empty(); });
-                    
+
                     _consume_buffer.Swap(_product_buffer);
 
                     // 2.唤醒生产者
@@ -59,24 +57,20 @@ namespace ns_log
         // 停止异步工作器
         void Stop()
         {
-            _stop = true;               // 将退出标志设置为true
-            _cond_consume.notify_all(); // 唤醒所有工作线程
-            _thread.join();             // 等待工作线程的退出
+            _stop = true;               
+            _cond_consume.notify_all(); 
+            _thread.join();            
         }
         // 添加数据到缓冲区
         void Push(const char *data, size_t len)
         {
-            // 1.无限扩容 - 非安全 - 压力测试
-            // 2.固定容量 - 满则阻塞
             std::unique_lock<std::mutex> lock(_mutex);
             if (_loop_type == AsyncType::ASYNC_SAFE)
-                // 缓冲区剩余空间大小 > 数据长度 则可以写入
                 _cond_product.wait(
                     lock, [&]()
                     { return _product_buffer.WriterAbleSize() >= len; });
-            // 满足条件,添加如数据
             _product_buffer.Push(data, len);
-            _cond_consume.notify_one(); // 唤醒消费者对缓冲区中数据进行处理
+            _cond_consume.notify_one();
         }
 
     private:

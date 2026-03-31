@@ -1,8 +1,4 @@
 #pragma once
-/*
-1. 定义枚举类,枚举出日志等级
-2. 提供转化接口, 将枚举转换为对应字符串
-*/
 
 namespace ns_log
 {
@@ -11,7 +7,7 @@ namespace ns_log
     public:
         enum class Value
         {
-            UNKNOW,
+            UNKNOW = 0,
             DEBUG,
             INFO,
             WARN,
@@ -19,26 +15,26 @@ namespace ns_log
             FATAL,
             OFF
         };
-        static const char *ToString(LogLevel::Value level)
+        static const char *ToString(Value level)
         {
             switch (level)
             {
-            case LogLevel::Value::DEBUG:
+            case Value::DEBUG:
                 return "DEBUG";
-            case LogLevel::Value::INFO:
+            case Value::INFO:
                 return "INFO";
-            case LogLevel::Value::WARN:
+            case Value::WARN:
                 return "WARN";
-            case LogLevel::Value::ERROR:
+            case Value::ERROR:
                 return "ERROR";
-            case LogLevel::Value::FATAL:
+            case Value::FATAL:
                 return "FATAL";
-            case LogLevel::Value::OFF:
+            case Value::OFF:
                 return "OFF";
             default:
-                return "UNKONW";
+                return "UNKNOW";
             }
-            return "UNKONW";
+            return "UNKNOW";
         }
     };
 }

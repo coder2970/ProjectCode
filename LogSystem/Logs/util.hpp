@@ -8,13 +8,12 @@
 #include <sys/stat.h>
 
 /*
-实用工具类的实现
-功能:
-1.获取系统时间
-2.判断文件是否存在
-3. 获取文件所在路径
-4. 创建目录
-
+    实用工具类的实现
+    功能:
+        1.获取系统时间
+        2.判断文件是否存在
+        3. 获取文件所在路径
+        4. 创建目录
 */
 namespace ns_log
 {
@@ -32,10 +31,9 @@ namespace ns_log
         class File
         {
         public:
-            /* 判断文件是否存在 */
+            // 判断文件是否存在
             static bool Exists(const std::string &pathname)
             {
-                // return (access(pathname.c_str(), F_OK) == 0); // 仅Linux平台
                 struct stat st;
                 if (stat(pathname.c_str(), &st) < 0)
                 {
@@ -44,7 +42,7 @@ namespace ns_log
                 return true;
             }
 
-            /* 获取文件所在路径 */
+            // 获取文件所在路径 
             static std::string Path(const std::string &pathname)
             {
                 size_t pos = pathname.find_last_of("/\\");
@@ -55,10 +53,10 @@ namespace ns_log
                 return pathname.substr(0, pos + 1);
             }
 
-            /* 创建目录 */
+            // 创建目录 
             static void CreateDirectory(const std::string &pathname)
             {
-                size_t pos = 0, idx = 0; /*标定查找的起始位置*/
+                size_t pos = 0, idx = 0;
                 while (idx < pathname.size())
                 {
                     pos = pathname.find_first_of("/\\", idx);
@@ -68,7 +66,6 @@ namespace ns_log
                     }
 
                     std::string parent_dir = pathname.substr(0, pos + 1);
-
                     if (Exists(parent_dir) == true)
                     {
                         idx = pos + 1;

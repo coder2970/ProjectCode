@@ -55,128 +55,66 @@ namespace ns_log
         {
             return _logger_name;
         }
+    protected:
+        // 提供统一的日志格式化和落地逻辑
+        void FormatAndSerialize(LogLevel::Value level, const std::string &filename, size_t line, const std::string &fmt, va_list ap)
+        {
+            char *res;
+            int ret = vasprintf(&res, fmt.c_str(), ap);
+            if (ret == -1)
+            {
+                std::cout << "vasprintf failed!" << std::endl;
+                return;
+            }
+            Serialize(level, filename, line, res);
+            free(res);
+        }
+
+    public:
         // 完成日志消息对象的构造,并进行格式化,得到格式后的日志消息字符串
         void Debug(const std::string &filename, size_t line, const std::string &fmt, ...)
         {
-            // 通过传入参数构造日志消息对象,进行日志格式化
-            // 1.判断当前日志等级是否达到输出等级
-            // 2.对fmt格式化字符串和不定参进行字符串组织,得到日志消息字符串
-            // 3.构造LogMessage对象
-            // 4.通过格式化工具,对LogMessage进行格式化,得到格式化后的字符串
-            // 5.进行日志落地
-
-            // 1.
-            if (LogLevel::Value::DEBUG < _limit_level)
-            {
-                return;
-            }
-            // 2.
+            if (LogLevel::Value::DEBUG < _limit_level) return;
             va_list ap;
             va_start(ap, fmt);
-            char *res;
-            int ret = vasprintf(&res, fmt.c_str(), ap);
-            if (ret == -1)
-            {
-                std::cout << "vasprintf failed!" << std::endl;
-                return;
-            }
-            // 此时res为格式化之后的字符串
+            FormatAndSerialize(LogLevel::Value::DEBUG, filename, line, fmt, ap);
             va_end(ap);
-            // 3. 4. 5.
-            Serialize(LogLevel::Value::DEBUG, filename, line, res);
-            free(res);
         }
+
         void Info(const std::string &filename, size_t line, const std::string &fmt, ...)
         {
-            // 1.
-            if (LogLevel::Value::INFO < _limit_level)
-            {
-                return;
-            }
-            // 2.
+            if (LogLevel::Value::INFO < _limit_level) return;
             va_list ap;
             va_start(ap, fmt);
-            char *res;
-            int ret = vasprintf(&res, fmt.c_str(), ap);
-            if (ret == -1)
-            {
-                std::cout << "vasprintf failed!" << std::endl;
-                return;
-            }
-            // 此时res为格式化之后的字符串
+            FormatAndSerialize(LogLevel::Value::INFO, filename, line, fmt, ap);
             va_end(ap);
-            // 3. 4. 5.
-            Serialize(LogLevel::Value::INFO, filename, line, res);
-            free(res);
         }
+
         void Warning(const std::string &filename, size_t line, const std::string &fmt, ...)
         {
-            // 1.
-            if (LogLevel::Value::WARN < _limit_level)
-            {
-                return;
-            }
-            // 2.
+            if (LogLevel::Value::WARN < _limit_level) return;
             va_list ap;
             va_start(ap, fmt);
-            char *res;
-            int ret = vasprintf(&res, fmt.c_str(), ap);
-            if (ret == -1)
-            {
-                std::cout << "vasprintf failed!" << std::endl;
-                return;
-            }
-            // 此时res为格式化之后的字符串
+            FormatAndSerialize(LogLevel::Value::WARN, filename, line, fmt, ap);
             va_end(ap);
-            // 3. 4. 5.
-            Serialize(LogLevel::Value::WARN, filename, line, res);
-            free(res);
         }
+
         void Error(const std::string &filename, size_t line, const std::string &fmt, ...)
         {
-            // 1.
-            if (LogLevel::Value::ERROR < _limit_level)
-            {
-                return;
-            }
-            // 2.
+            if (LogLevel::Value::ERROR < _limit_level) return;
             va_list ap;
             va_start(ap, fmt);
-            char *res;
-            int ret = vasprintf(&res, fmt.c_str(), ap);
-            if (ret == -1)
-            {
-                std::cout << "vasprintf failed!" << std::endl;
-                return;
-            }
-            // 此时res为格式化之后的字符串
+            FormatAndSerialize(LogLevel::Value::ERROR, filename, line, fmt, ap);
             va_end(ap);
-            // 3. 4. 5.
-            Serialize(LogLevel::Value::ERROR, filename, line, res);
-            free(res);
         }
+
         void Fatal(const std::string &filename, size_t line, const std::string &fmt, ...)
         {
-            // 1.
-            if (LogLevel::Value::FATAL < _limit_level)
-            {
-                return;
-            }
-            // 2.
+            if (LogLevel::Value::FATAL < _limit_level) return;
             va_list ap;
             va_start(ap, fmt);
-            char *res;
-            int ret = vasprintf(&res, fmt.c_str(), ap);
-            if (ret == -1)
-            {
-                std::cout << "vasprintf failed!" << std::endl;
-                return;
-            }
-            // 此时res为格式化之后的字符串
+            FormatAndSerialize(LogLevel::Value::FATAL, filename, line, fmt, ap);
             va_end(ap);
-            // 3. 4. 5.
-            Serialize(LogLevel::Value::FATAL, filename, line, res);
-            free(res);
         }
 
     protected:
@@ -220,7 +158,8 @@ namespace ns_log
             : Logger(logger_name, level, formatter, sinks), _looper(std::make_shared<AsyncLooper>(std::bind(&AsyncLogger::RealLog, this, std::placeholders::_1), loop_type))
         {
         }
-        void Log(const char *data, size_t len) override // 将数据写入缓冲区
+        // 将数据写入缓冲区
+        void Log(const char *data, size_t len) override 
         {
             _looper->Push(data, len);
         }
@@ -241,10 +180,7 @@ namespace ns_log
         AsyncLooper::ptr _looper;
     };
 
-    // 建造者模式 构造 日志器, 简化用户使用的复杂度
-    // 1.抽象日志器建造者类
-    // 设置日志器类型, 将不同类型日志器放到同一个日志器建造者类中完成
-    // 2.派生出具体的建造者类 -- 局部日志器建造者和全局日志器建造者
+    // 建造者模式构造 日志器, 简化用户使用的复杂度
     enum class LoggerType
     {
         LOGGER_SYNC,
@@ -381,12 +317,10 @@ namespace ns_log
             assert(_logger_name.empty() == false); // 必须要有日志器名称
             if (_formatter.get() == nullptr)
             {
-                // 没有日志器
                 _formatter = std::make_shared<Formatter>();
             }
             if (_sinks.empty())
             {
-                // 默认添加标准输出的落地器
                 BuildSink<StdoutSink>();
             }
             Logger::ptr logger;
@@ -396,7 +330,6 @@ namespace ns_log
             }
             else
             {
-                // 同步日志器
                 logger =  std::make_shared<SyncLogger>(_logger_name, _limit_level, _formatter, _sinks);
             }
             LoggerManager::getInstanence().AddLogger(logger);

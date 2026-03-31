@@ -1,10 +1,5 @@
 #pragma once
 // 格式化字串:从日志消息中取指定的元素,追加到一块内存空间中
-// 设计思想:
-// 1. 抽象格式化子项基类
-// 2. 基于基类,派生出不同的格式化子项子类 - 主体消息,日志等级...
-// 在父类中定义父类指针的数组,指向不同的格式化子项子类对象
-
 #include <memory>
 #include <ctime>
 #include <sstream>
@@ -192,7 +187,7 @@ namespace ns_log
             {
                 return std::make_shared<NewlineFormatItem>();
             }
-            if(key.empty())
+            if(key == "")
                 return std::make_shared<OtherFormatItem>(val);
             std::cout << "没有对应的格式化字符串: %" << key << std::endl;
             abort();
@@ -201,7 +196,6 @@ namespace ns_log
         // 解析
         bool ParsePattern()
         {
-            // 1. 对格式化规则字符串进行解析 - 找%
             std::vector<std::pair<std::string, std::string>> format_order;
             size_t pos = 0;
             std::string key, value;
@@ -254,6 +248,10 @@ namespace ns_log
                 format_order.push_back({key, value});
                 key.clear();
                 value.clear();
+            }
+            if (!value.empty())
+            {
+                format_order.push_back({"", value});
             }
             // 2. 根据解析得到的数据初始化格式化子项数组成员
             for (auto &it : format_order)
